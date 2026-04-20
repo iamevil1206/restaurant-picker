@@ -78,23 +78,13 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-gray-50 p-4 md:p-6">
-      <header className="mb-4 flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900">
-            🍽️ 단계별 음식점 추천
-          </h1>
-          <p className="text-xs text-gray-500">
-            위치 → 반경 → 가격대 → 카테고리 순서대로 좁혀가세요. 언제든 "지금 검색" 가능.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={runSearch}
-          disabled={!canSearch}
-          className="flex-shrink-0 rounded-lg bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-rose-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-        >
-          🔎 지금 검색
-        </button>
+      <header className="mb-4">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900">
+          🍽️ 단계별 음식점 추천
+        </h1>
+        <p className="text-xs text-gray-500">
+          위치 → 반경 → 가격대 → 카테고리 순서대로 좁혀가세요. 언제든 "지금 검색" 가능.
+        </p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -136,6 +126,14 @@ export default function HomePage() {
             onMidChange={setMidIds}
             onLeafChange={setLeafIds}
           />
+          <button
+            type="button"
+            onClick={runSearch}
+            disabled={!canSearch}
+            className="sticky bottom-0 w-full rounded-lg bg-rose-600 px-5 py-3 text-sm font-semibold text-white shadow-md hover:bg-rose-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            {loading ? "검색중…" : "🔎 지금 검색"}
+          </button>
         </section>
       </div>
 
