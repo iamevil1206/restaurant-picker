@@ -40,7 +40,7 @@ export default function MapPicker({
   useEffect(() => {
     if (!ready || !mapElRef.current || mapRef.current) return;
     const naver = window.naver;
-    if (!naver) return;
+    if (!naver?.maps?.Map) return;
     const initCenter = center ?? DEFAULT_CENTER;
     const map = new naver.maps.Map(mapElRef.current, {
       center: new naver.maps.LatLng(initCenter.lat, initCenter.lng),
@@ -58,7 +58,7 @@ export default function MapPicker({
   useEffect(() => {
     if (!ready || !mapRef.current) return;
     const naver = window.naver;
-    if (!naver || !center) return;
+    if (!naver?.maps?.LatLng || !center) return;
     const latlng = new naver.maps.LatLng(center.lat, center.lng);
     mapRef.current.panTo(latlng);
     if (centerMarkerRef.current) {
@@ -89,7 +89,7 @@ export default function MapPicker({
   useEffect(() => {
     if (!ready || !center || !onDistrictChange) return;
     const naver = window.naver;
-    if (!naver?.maps.Service?.reverseGeocode) return;
+    if (!naver?.maps?.LatLng || !naver.maps.Service?.reverseGeocode) return;
     const latlng = new naver.maps.LatLng(center.lat, center.lng);
     try {
       naver.maps.Service.reverseGeocode(
@@ -126,7 +126,7 @@ export default function MapPicker({
   useEffect(() => {
     if (!ready || !mapRef.current) return;
     const naver = window.naver;
-    if (!naver) return;
+    if (!naver?.maps?.LatLng) return;
     for (const m of resultMarkersRef.current) m.setMap(null);
     resultMarkersRef.current = [];
     const info = infoRef.current;
@@ -202,8 +202,13 @@ export default function MapPicker({
           src={mapUrl}
           strategy="afterInteractive"
           onLoad={() => {
-            setScriptStatus("ready");
-            setReady(true);
+            // 키/도메인 문제로 스크립트는 실행됐지만 maps가 null인 경우를 잡는다
+            if (typeof window !== "undefined" && window.naver?.maps?.Map) {
+              setScriptStatus("ready");
+              setReady(true);
+            } else {
+              setScriptStatus("error");
+            }
           }}
           onError={() => setScriptStatus("error")}
         />
@@ -275,7 +280,9 @@ export default function MapPicker({
       )}
       {clientId && scriptStatus === "error" && (
         <p className="text-xs text-red-600">
-          네이버 지도 스크립트 로드 실패 — 키/도메인 등록 여부를 확인하세요.
+          네이버 지도 인증 실패 — NCP 콘솔에서 현재 도메인(
+          {typeof window !== "undefined" ? window.location.origin : ""})이
+          "서비스 환경 등록 &gt; Web"에 추가되어 있는지 확인하세요.
         </p>
       )}
       <p className="text-xs text-gray-500">
