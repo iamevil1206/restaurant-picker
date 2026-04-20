@@ -6,6 +6,7 @@ import RadiusSelector from "@/components/RadiusSelector";
 import PriceRangeSlider from "@/components/PriceRangeSlider";
 import CategoryWizard from "@/components/CategoryWizard";
 import ResultList from "@/components/ResultList";
+import { useFavorites } from "@/hooks/useFavorites";
 import type { Restaurant, SearchInput, SearchResponse } from "@/types/restaurant";
 
 export default function HomePage() {
@@ -20,6 +21,7 @@ export default function HomePage() {
   const [midIds, setMidIds] = useState<string[]>([]);
   const [leafIds, setLeafIds] = useState<string[]>([]);
   const [sort, setSort] = useState<"distance" | "rating">("distance");
+  const { favorites, toggle: toggleFavorite, move: moveFavorite } = useFavorites();
 
   const [results, setResults] = useState<Restaurant[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -125,6 +127,9 @@ export default function HomePage() {
             onTopChange={setTopId}
             onMidChange={setMidIds}
             onLeafChange={setLeafIds}
+            favoriteIds={favorites}
+            onToggleFavorite={toggleFavorite}
+            onMoveFavorite={moveFavorite}
           />
           <button
             type="button"

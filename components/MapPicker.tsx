@@ -191,6 +191,44 @@ export default function MapPicker({
     setSearchMsg(`📍 ${c.name}${c.roadAddress ? ` (${c.roadAddress})` : ""}`);
   };
 
+  const useMyLocation = () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setSearchState("error");
+      setSearchMsg("이 브라우저는 위치 기능을 지원하지 않습니다.");
+      return;
+    }
+    setSearchState("loading");
+    setSearchMsg("위치 확인 중…");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        onCenterChange({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
+        setCandidates([]);
+        setSearchState("done");
+        setSearchMsg(
+          `📍 현재 위치로 이동 (±${Math.round(pos.coords.accuracy)}m)`,
+        );
+      },
+      (err) => {
+        setSearchState("error");
+        if (err.code === err.PERMISSION_DENIED) {
+          setSearchMsg(
+            "위치 권한이 거부되었습니다. 브라우저 주소창 좌측 자물쇠 → 사이트 설정에서 위치를 허용하세요.",
+          );
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          setSearchMsg("위치 정보를 가져올 수 없습니다.");
+        } else if (err.code === err.TIMEOUT) {
+          setSearchMsg("위치 확인 시간이 초과되었습니다.");
+        } else {
+          setSearchMsg("위치 확인 실패");
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
+    );
+  };
+
   const mapUrl = clientId
     ? `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(clientId)}&submodules=geocoder`
     : "";
@@ -229,6 +267,15 @@ export default function MapPicker({
           disabled={searchState === "loading"}
         >
           {searchState === "loading" ? "검색중…" : "주소검색"}
+        </button>
+        <button
+          type="button"
+          onClick={useMyLocation}
+          title="현재 위치로 이동"
+          className="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:border-blue-400 hover:bg-blue-50 disabled:opacity-50"
+          disabled={searchState === "loading"}
+        >
+          📍 내 위치
         </button>
       </div>
       {searchMsg && (
