@@ -1,65 +1,158 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useCallback, useState } from "react";
+import MapPicker from "@/components/MapPicker";
+import RadiusSelector from "@/components/RadiusSelector";
+import PriceRangeSlider from "@/components/PriceRangeSlider";
+import CategoryWizard from "@/components/CategoryWizard";
+import ResultList from "@/components/ResultList";
+import type { Restaurant, SearchInput, SearchResponse } from "@/types/restaurant";
+
+export default function HomePage() {
+  const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [district, setDistrict] = useState<string | null>(null);
+  const [radiusM, setRadiusM] = useState(500);
+  const [priceMin, setPriceMin] = useState(0);
+  const [priceMax, setPriceMax] = useState(4);
+  const [priceIgnore, setPriceIgnore] = useState(true);
+  const [includeUnknownPrice, setIncludeUnknownPrice] = useState(true);
+  const [topId, setTopId] = useState<string | null>(null);
+  const [midIds, setMidIds] = useState<string[]>([]);
+  const [leafIds, setLeafIds] = useState<string[]>([]);
+  const [sort, setSort] = useState<"distance" | "rating">("distance");
+
+  const [results, setResults] = useState<Restaurant[]>([]);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const runSearch = useCallback(async () => {
+    if (!center) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const effectiveLeaves = leafIds.length > 0 ? leafIds : midIds;
+      const payload: SearchInput = {
+        lat: center.lat,
+        lng: center.lng,
+        radiusM,
+        priceMin: priceIgnore ? undefined : priceMin,
+        priceMax: priceIgnore ? undefined : priceMax,
+        categoryLeafIds: effectiveLeaves,
+        includeUnknownPrice,
+        sort,
+        district,
+      };
+      const res = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`검색 실패: ${res.status} ${text}`);
+      }
+      const data: SearchResponse = await res.json();
+      setResults(data.results);
+      setWarnings(data.warnings);
+    } catch (e) {
+      setError((e as Error).message);
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    center,
+    district,
+    radiusM,
+    priceIgnore,
+    priceMin,
+    priceMax,
+    leafIds,
+    midIds,
+    includeUnknownPrice,
+    sort,
+  ]);
+
+  const canSearch = center !== null && !loading;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="min-h-screen bg-gray-50 p-4 md:p-6">
+      <header className="mb-4 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900">
+            🍽️ 단계별 음식점 추천
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-xs text-gray-500">
+            위치 → 반경 → 가격대 → 카테고리 순서대로 좁혀가세요. 언제든 "지금 검색" 가능.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        <button
+          type="button"
+          onClick={runSearch}
+          disabled={!canSearch}
+          className="flex-shrink-0 rounded-lg bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-rose-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+        >
+          🔎 지금 검색
+        </button>
+      </header>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <section className="lg:col-span-2 flex flex-col gap-3 bg-white rounded-lg border border-gray-200 p-3 h-[560px]">
+          <MapPicker
+            center={center}
+            radiusM={radiusM}
+            results={results}
+            onCenterChange={setCenter}
+            onDistrictChange={setDistrict}
+          />
+          {district && (
+            <p className="text-xs text-gray-500">
+              📍 {district} — Naver 검색에 이 지역명이 자동으로 추가됩니다
+            </p>
+          )}
+        </section>
+
+        <section className="flex flex-col gap-4 bg-white rounded-lg border border-gray-200 p-4">
+          <RadiusSelector value={radiusM} onChange={setRadiusM} />
+          <PriceRangeSlider
+            min={priceMin}
+            max={priceMax}
+            ignore={priceIgnore}
+            includeUnknown={includeUnknownPrice}
+            onChange={(v) => {
+              setPriceMin(v.min);
+              setPriceMax(v.max);
+              setPriceIgnore(v.ignore);
+              setIncludeUnknownPrice(v.includeUnknown);
+            }}
+          />
+          <div className="h-px bg-gray-200" />
+          <CategoryWizard
+            topId={topId}
+            midIds={midIds}
+            leafIds={leafIds}
+            onTopChange={setTopId}
+            onMidChange={setMidIds}
+            onLeafChange={setLeafIds}
+          />
+        </section>
+      </div>
+
+      <div className="mt-4 bg-white rounded-lg border border-gray-200 p-4">
+        {error && (
+          <p className="mb-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">
+            {error}
+          </p>
+        )}
+        <ResultList
+          results={results}
+          loading={loading}
+          warnings={warnings}
+          sort={sort}
+          onSortChange={setSort}
+        />
+      </div>
+    </main>
   );
 }
