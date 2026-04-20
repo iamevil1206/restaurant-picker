@@ -113,11 +113,11 @@ export default function ResultList({
               )}
               <a
                 className="text-green-700 hover:underline"
-                href={r.naverUrl ?? buildNaverSearchUrl(r)}
+                href={pickNaverHref(r)}
                 target="_blank"
                 rel="noreferrer"
               >
-                네이버
+                네이버 플레이스
               </a>
               {r.googleUrl && (
                 <a
@@ -140,10 +140,29 @@ export default function ResultList({
   );
 }
 
+function extractDistrict(addr?: string): string {
+  if (!addr) return "";
+  const m = addr.match(/([가-힣]+[시도])?\s*([가-힣]+[구군])/);
+  return m?.[2] ?? "";
+}
+
 function buildNaverSearchUrl(r: Restaurant): string {
-  const roadShort = r.roadAddress?.split(" ").slice(0, 2).join(" ") ?? "";
-  const addrShort = r.address?.split(" ").slice(0, 2).join(" ") ?? "";
-  const locale = roadShort || addrShort;
-  const q = locale ? `${locale} ${r.name}` : r.name;
+  const district =
+    extractDistrict(r.roadAddress) || extractDistrict(r.address);
+  const q = district ? `${district} ${r.name}` : r.name;
   return `https://map.naver.com/p/search/${encodeURIComponent(q)}`;
+}
+
+function pickNaverHref(r: Restaurant): string {
+  // Naver API의 item.link는 업체 홈페이지(인스타/배민 등)일 때가 많아
+  // naver.com 도메인이 아니면 검색 URL을 쓴다.
+  if (r.naverUrl) {
+    try {
+      const u = new URL(r.naverUrl);
+      if (u.hostname.includes("naver.com")) return r.naverUrl;
+    } catch {
+      /* invalid URL → fall through */
+    }
+  }
+  return buildNaverSearchUrl(r);
 }
