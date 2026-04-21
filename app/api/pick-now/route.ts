@@ -4,6 +4,7 @@ import {
   BUCKET_KAKAO_GROUP,
   BUCKET_LABELS,
   BUCKET_LEAVES,
+  bucketForHour,
   estimateWaitingLevel,
   getTimeBucket,
   shuffle,
@@ -28,6 +29,7 @@ type Input = {
   lng: number;
   seed: number;
   district: string | null;
+  clientHour?: number;
   bucketOverride?: TimeBucket;
 };
 
@@ -44,6 +46,10 @@ function validate(body: unknown): Input | { error: string } {
     lng: b.lng,
     seed: isNumber(b.seed) ? b.seed : Date.now(),
     district: typeof b.district === "string" ? b.district : null,
+    clientHour:
+      isNumber(b.clientHour) && b.clientHour >= 0 && b.clientHour < 24
+        ? b.clientHour
+        : undefined,
     bucketOverride:
       typeof b.bucketOverride === "string"
         ? (b.bucketOverride as TimeBucket)
@@ -58,9 +64,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error }, { status: 400 });
   }
 
-  const now = new Date();
-  const bucket = parsed.bucketOverride ?? getTimeBucket(now);
-  const hour = now.getHours() + now.getMinutes() / 60;
+  const hour =
+    parsed.clientHour ??
+    new Date().getHours() + new Date().getMinutes() / 60;
+  const bucket =
+    parsed.bucketOverride ??
+    (parsed.clientHour !== undefined ? bucketForHour(hour) : getTimeBucket());
   const leafIds = BUCKET_LEAVES[bucket];
   const center = { lat: parsed.lat, lng: parsed.lng };
   const warnings: string[] = [];

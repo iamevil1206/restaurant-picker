@@ -59,6 +59,7 @@ export default function PickNowModal({ open, onClose, center, district }: Props)
     setLoading(true);
     setError(null);
     try {
+      const now = new Date();
       const res = await fetch("/api/pick-now", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -67,6 +68,7 @@ export default function PickNowModal({ open, onClose, center, district }: Props)
           lng: center.lng,
           district,
           seed: Math.floor(Math.random() * 1_000_000),
+          clientHour: now.getHours() + now.getMinutes() / 60,
         }),
       });
       if (!res.ok) {

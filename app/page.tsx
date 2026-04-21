@@ -29,6 +29,41 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pickNowOpen, setPickNowOpen] = useState(false);
+  const [pickNowLocating, setPickNowLocating] = useState(false);
+  const [pickNowLocError, setPickNowLocError] = useState<string | null>(null);
+
+  const openPickNow = useCallback(() => {
+    setPickNowLocError(null);
+    if (center) {
+      setPickNowOpen(true);
+      return;
+    }
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setPickNowLocError("이 브라우저는 위치 기능을 지원하지 않습니다. 지도에서 위치를 먼저 지정하세요.");
+      return;
+    }
+    setPickNowLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setPickNowLocating(false);
+        setPickNowOpen(true);
+      },
+      (err) => {
+        setPickNowLocating(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          setPickNowLocError("위치 권한이 거부되었습니다. 주소창 자물쇠 → 위치 허용 후 다시 눌러주세요.");
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          setPickNowLocError("위치 정보를 가져올 수 없습니다. 지도에서 직접 지정해 주세요.");
+        } else if (err.code === err.TIMEOUT) {
+          setPickNowLocError("위치 확인이 시간 초과됐습니다. 다시 시도해 주세요.");
+        } else {
+          setPickNowLocError("위치 확인 실패");
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
+    );
+  }, [center]);
 
   const runSearch = useCallback(async () => {
     if (!center) return;
@@ -91,15 +126,22 @@ export default function HomePage() {
             위치 → 반경 → 가격대 → 카테고리 순서대로 좁혀가세요. 언제든 "지금 검색" 가능.
           </p>
         </div>
-        <button
-          type="button"
-          className="shrink-0 rounded-lg bg-purple-600 px-3 py-2 text-sm font-semibold text-white hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-          onClick={() => setPickNowOpen(true)}
-          disabled={!center}
-          title={!center ? "먼저 지도에서 위치를 지정하세요" : "500m 반경 · 시간대별 추천"}
-        >
-          🎲 지금 뭐먹을까?
-        </button>
+        <div className="shrink-0 flex flex-col items-end gap-1">
+          <button
+            type="button"
+            className="rounded-lg bg-purple-600 px-3 py-2 text-sm font-semibold text-white hover:bg-purple-700 disabled:bg-purple-300"
+            onClick={openPickNow}
+            disabled={pickNowLocating}
+            title="500m 반경 · 시간대별 추천"
+          >
+            {pickNowLocating ? "위치 확인중…" : "🎲 지금 뭐먹을까?"}
+          </button>
+          {pickNowLocError && (
+            <p className="max-w-[220px] text-right text-[11px] text-red-600">
+              {pickNowLocError}
+            </p>
+          )}
+        </div>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

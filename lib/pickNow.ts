@@ -55,13 +55,16 @@ export const BUCKET_KAKAO_GROUP: Record<TimeBucket, "FD6" | "CE7" | undefined> =
   latenight: "FD6",
 };
 
-export function getTimeBucket(d: Date = new Date()): TimeBucket {
-  const h = d.getHours() + d.getMinutes() / 60;
+export function bucketForHour(h: number): TimeBucket {
   if (h >= 5 && h < 10) return "breakfast";
   if (h >= 10 && h < 14) return "lunch";
   if (h >= 14 && h < 17) return "afternoon";
   if (h >= 17 && h < 21) return "dinner";
   return "latenight"; // 21-24 and 0-5
+}
+
+export function getTimeBucket(d: Date = new Date()): TimeBucket {
+  return bucketForHour(d.getHours() + d.getMinutes() / 60);
 }
 
 export type WaitingLevel = "low" | "medium" | "high" | "unknown";
