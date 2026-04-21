@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { Restaurant } from "@/types/restaurant";
+import { pickNaverHref } from "@/lib/naverPlace";
 
 const PRICE_LABEL = ["무료", "₩", "₩₩", "₩₩₩", "₩₩₩₩"];
 
@@ -140,33 +141,3 @@ export default function ResultList({
   );
 }
 
-function extractDistrict(addr?: string): string {
-  if (!addr) return "";
-  const m = addr.match(/([가-힣]+[시도])?\s*([가-힣]+[구군])/);
-  return m?.[2] ?? "";
-}
-
-function buildNaverSearchUrl(r: Restaurant): string {
-  // Server-side redirect that probes Naver Local with the bare name first
-  // (district prefix often zeroes out otherwise valid results), falling back
-  // to `{district} {name}` only when the bare name has no hits.
-  const district =
-    extractDistrict(r.roadAddress) || extractDistrict(r.address);
-  const params = new URLSearchParams({ name: r.name });
-  if (district) params.set("district", district);
-  return `/api/naver-redirect?${params.toString()}`;
-}
-
-function pickNaverHref(r: Restaurant): string {
-  // Naver API의 item.link는 업체 홈페이지(인스타/배민 등)일 때가 많아
-  // naver.com 도메인이 아니면 검색 URL을 쓴다.
-  if (r.naverUrl) {
-    try {
-      const u = new URL(r.naverUrl);
-      if (u.hostname.includes("naver.com")) return r.naverUrl;
-    } catch {
-      /* invalid URL → fall through */
-    }
-  }
-  return buildNaverSearchUrl(r);
-}

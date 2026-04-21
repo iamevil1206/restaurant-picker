@@ -6,6 +6,7 @@ import RadiusSelector from "@/components/RadiusSelector";
 import PriceRangeSlider from "@/components/PriceRangeSlider";
 import CategoryWizard from "@/components/CategoryWizard";
 import ResultList from "@/components/ResultList";
+import PickNowModal from "@/components/PickNowModal";
 import { useFavorites } from "@/hooks/useFavorites";
 import type { Restaurant, SearchInput, SearchResponse } from "@/types/restaurant";
 
@@ -27,6 +28,7 @@ export default function HomePage() {
   const [warnings, setWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pickNowOpen, setPickNowOpen] = useState(false);
 
   const runSearch = useCallback(async () => {
     if (!center) return;
@@ -80,13 +82,24 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-gray-50 p-4 md:p-6">
-      <header className="mb-4">
-        <h1 className="text-xl md:text-2xl font-bold text-gray-900">
-          🍽️ 단계별 음식점 추천
-        </h1>
-        <p className="text-xs text-gray-500">
-          위치 → 반경 → 가격대 → 카테고리 순서대로 좁혀가세요. 언제든 "지금 검색" 가능.
-        </p>
+      <header className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900">
+            🍽️ 단계별 음식점 추천
+          </h1>
+          <p className="text-xs text-gray-500">
+            위치 → 반경 → 가격대 → 카테고리 순서대로 좁혀가세요. 언제든 "지금 검색" 가능.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="shrink-0 rounded-lg bg-purple-600 px-3 py-2 text-sm font-semibold text-white hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          onClick={() => setPickNowOpen(true)}
+          disabled={!center}
+          title={!center ? "먼저 지도에서 위치를 지정하세요" : "500m 반경 · 시간대별 추천"}
+        >
+          🎲 지금 뭐먹을까?
+        </button>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -156,6 +169,13 @@ export default function HomePage() {
           onSortChange={setSort}
         />
       </div>
+
+      <PickNowModal
+        open={pickNowOpen}
+        onClose={() => setPickNowOpen(false)}
+        center={center}
+        district={district}
+      />
     </main>
   );
 }
