@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import type { Restaurant } from "@/types/restaurant";
 import {
-  BUCKET_KAKAO_GROUP,
-  BUCKET_LABELS,
-  BUCKET_LEAVES,
   bucketForHour,
   estimateWaitingLevel,
+  getBucketKakaoGroup,
+  getBucketLabel,
+  getBucketLeaves,
   getTimeBucket,
   shuffle,
+  type PickMode,
   type PickNowResult,
   type TimeBucket,
 } from "@/lib/pickNow";
@@ -29,6 +30,7 @@ type Input = {
   lng: number;
   seed: number;
   district: string | null;
+  mode: PickMode;
   clientHour?: number;
   bucketOverride?: TimeBucket;
 };
@@ -46,6 +48,7 @@ function validate(body: unknown): Input | { error: string } {
     lng: b.lng,
     seed: isNumber(b.seed) ? b.seed : Date.now(),
     district: typeof b.district === "string" ? b.district : null,
+    mode: b.mode === "drink" ? "drink" : "food",
     clientHour:
       isNumber(b.clientHour) && b.clientHour >= 0 && b.clientHour < 24
         ? b.clientHour
@@ -70,7 +73,7 @@ export async function POST(req: Request) {
   const bucket =
     parsed.bucketOverride ??
     (parsed.clientHour !== undefined ? bucketForHour(hour) : getTimeBucket());
-  const leafIds = BUCKET_LEAVES[bucket];
+  const leafIds = getBucketLeaves(bucket, parsed.mode);
   const center = { lat: parsed.lat, lng: parsed.lng };
   const warnings: string[] = [];
 
@@ -94,7 +97,7 @@ export async function POST(req: Request) {
   const cappedKw = Array.from(keywords).slice(0, MAX_KW);
   const cappedGoogleKw = Array.from(googleKeywords).slice(0, MAX_GOOGLE_KW);
   const districtPrefix = parsed.district?.trim() ? `${parsed.district.trim()} ` : "";
-  const kakaoGroup = BUCKET_KAKAO_GROUP[bucket];
+  const kakaoGroup = getBucketKakaoGroup(bucket, parsed.mode);
 
   const tasks: Promise<Restaurant[]>[] = [];
   for (const kw of cappedKw) {
@@ -135,7 +138,8 @@ export async function POST(req: Request) {
   }));
 
   return NextResponse.json({
-    bucket: { key: bucket, label: BUCKET_LABELS[bucket] },
+    bucket: { key: bucket, label: getBucketLabel(bucket, parsed.mode) },
+    mode: parsed.mode,
     hour,
     results: picks,
     warnings,

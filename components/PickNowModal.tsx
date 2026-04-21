@@ -16,11 +16,30 @@ type PickNowResponse = {
   totalCandidates: number;
 };
 
+type Mode = "food" | "drink";
+
 type Props = {
   open: boolean;
   onClose: () => void;
   center: { lat: number; lng: number } | null;
   district: string | null;
+  mode: Mode;
+};
+
+const MODE_META: Record<
+  Mode,
+  { title: string; emoji: string; primaryColor: string }
+> = {
+  food: {
+    title: "지금 뭐먹을까?",
+    emoji: "🎲",
+    primaryColor: "bg-rose-600 hover:bg-rose-700",
+  },
+  drink: {
+    title: "지금 뭐마실까?",
+    emoji: "🍹",
+    primaryColor: "bg-indigo-600 hover:bg-indigo-700",
+  },
 };
 
 const BADGE_STYLE: Record<
@@ -49,7 +68,7 @@ const BADGE_STYLE: Record<
   },
 };
 
-export default function PickNowModal({ open, onClose, center, district }: Props) {
+export default function PickNowModal({ open, onClose, center, district, mode }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<PickNowResponse | null>(null);
@@ -67,6 +86,7 @@ export default function PickNowModal({ open, onClose, center, district }: Props)
           lat: center.lat,
           lng: center.lng,
           district,
+          mode,
           seed: Math.floor(Math.random() * 1_000_000),
           clientHour: now.getHours() + now.getMinutes() / 60,
         }),
@@ -82,7 +102,7 @@ export default function PickNowModal({ open, onClose, center, district }: Props)
     } finally {
       setLoading(false);
     }
-  }, [center, district]);
+  }, [center, district, mode]);
 
   useEffect(() => {
     if (open) {
@@ -93,9 +113,11 @@ export default function PickNowModal({ open, onClose, center, district }: Props)
 
   if (!open) return null;
 
+  const meta = MODE_META[mode];
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4"
       onClick={onClose}
     >
       <div
@@ -103,7 +125,9 @@ export default function PickNowModal({ open, onClose, center, district }: Props)
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-1">
-          <h2 className="text-lg font-bold text-gray-900">🎲 지금 뭐먹을까?</h2>
+          <h2 className="text-lg font-bold text-gray-900">
+            {meta.emoji} {meta.title}
+          </h2>
           <button
             type="button"
             className="text-gray-400 hover:text-gray-700 text-xl leading-none"
@@ -228,11 +252,11 @@ export default function PickNowModal({ open, onClose, center, district }: Props)
         <div className="flex gap-2">
           <button
             type="button"
-            className="flex-1 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:bg-gray-300"
+            className={`flex-1 rounded-lg ${meta.primaryColor} px-4 py-2.5 text-sm font-semibold text-white disabled:bg-gray-300`}
             onClick={fetchPicks}
             disabled={loading || !center}
           >
-            🎲 다시
+            {meta.emoji} 다시
           </button>
           <button
             type="button"
