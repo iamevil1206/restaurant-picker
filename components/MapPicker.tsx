@@ -28,8 +28,15 @@ export default function MapPicker({
   const circleRef = useRef<NaverCircle | null>(null);
   const resultMarkersRef = useRef<NaverMarker[]>([]);
   const infoRef = useRef<NaverInfoWindow | null>(null);
-  const [ready, setReady] = useState(false);
-  const [scriptStatus, setScriptStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  // Seed ready/scriptStatus from window.naver so remounts (e.g., after
+  // collapsing and re-expanding the map card) don't wait for Script onLoad,
+  // which may not fire when the script is already in the document.
+  const naverAlreadyLoaded =
+    typeof window !== "undefined" && !!window.naver?.maps?.Map;
+  const [ready, setReady] = useState(naverAlreadyLoaded);
+  const [scriptStatus, setScriptStatus] = useState<
+    "idle" | "loading" | "ready" | "error"
+  >(naverAlreadyLoaded ? "ready" : "idle");
   const [query, setQuery] = useState("");
   const [candidates, setCandidates] = useState<
     Array<{ name: string; address?: string; roadAddress?: string; lat: number; lng: number; category?: string }>

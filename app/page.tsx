@@ -31,6 +31,7 @@ export default function HomePage() {
   const [pickNowMode, setPickNowMode] = useState<"food" | "drink" | null>(null);
   const [pickNowLocating, setPickNowLocating] = useState(false);
   const [pickNowLocError, setPickNowLocError] = useState<string | null>(null);
+  const [mapCollapsed, setMapCollapsed] = useState(false);
 
   const openPickNow = useCallback(
     (mode: "food" | "drink") => {
@@ -156,19 +157,38 @@ export default function HomePage() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <section className="lg:col-span-2 flex flex-col gap-3 bg-white rounded-lg border border-gray-200 p-3 h-[560px]">
-          <MapPicker
-            center={center}
-            radiusM={radiusM}
-            results={results}
-            onCenterChange={setCenter}
-            onDistrictChange={setDistrict}
-          />
-          {district && (
-            <p className="text-xs text-gray-500">
-              📍 {district} — Naver 검색에 이 지역명이 자동으로 추가됩니다
-            </p>
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:items-start">
+        <section
+          className={`bg-white rounded-lg border border-gray-200 p-3 flex flex-col gap-2 sticky top-2 z-20 lg:row-span-2 lg:max-h-[calc(100vh-1rem)] ${
+            mapCollapsed ? "" : "h-[560px] max-h-[calc(100vh-1rem)]"
+          }`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-semibold text-gray-700 truncate">
+              📍 위치 · 지도
+              {district && (
+                <span className="ml-1 font-normal text-gray-500">
+                  — {district}
+                </span>
+              )}
+            </span>
+            <button
+              type="button"
+              onClick={() => setMapCollapsed((v) => !v)}
+              className="shrink-0 rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50"
+              aria-expanded={!mapCollapsed}
+            >
+              {mapCollapsed ? "펼치기 ▼" : "접기 ▲"}
+            </button>
+          </div>
+          {!mapCollapsed && (
+            <MapPicker
+              center={center}
+              radiusM={radiusM}
+              results={results}
+              onCenterChange={setCenter}
+              onDistrictChange={setDistrict}
+            />
           )}
         </section>
 
@@ -206,21 +226,21 @@ export default function HomePage() {
             {loading ? "검색중…" : "🔎 지금 검색"}
           </button>
         </section>
-      </div>
 
-      <div className="mt-4 bg-white rounded-lg border border-gray-200 p-4">
-        {error && (
-          <p className="mb-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">
-            {error}
-          </p>
-        )}
-        <ResultList
-          results={results}
-          loading={loading}
-          warnings={warnings}
-          sort={sort}
-          onSortChange={setSort}
-        />
+        <section className="bg-white rounded-lg border border-gray-200 p-4">
+          {error && (
+            <p className="mb-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">
+              {error}
+            </p>
+          )}
+          <ResultList
+            results={results}
+            loading={loading}
+            warnings={warnings}
+            sort={sort}
+            onSortChange={setSort}
+          />
+        </section>
       </div>
 
       <PickNowModal
