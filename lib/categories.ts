@@ -4,18 +4,36 @@ export type SearchHints = {
   googleKeyword?: string;
 };
 
-export type MoodKind = "emotional" | "unique" | "bar";
+export type MoodKind =
+  | "emotional"
+  | "unique"
+  | "bar"
+  | "solo"
+  | "date"
+  | "family"
+  | "kids"
+  | "friends";
 
 export const MOOD_LABELS: Record<MoodKind, string> = {
   emotional: "감성",
   unique: "이색",
   bar: "주점",
+  solo: "혼밥",
+  date: "데이트",
+  family: "가족",
+  kids: "아이와",
+  friends: "친구와",
 };
 
 export const MOOD_TRIGGERS: Record<MoodKind, string[]> = {
   emotional: ["감성", "분위기", "무드", "인테리어", "예쁜", "뷰", "인생샷", "데이트", "아늑"],
   unique: ["이색", "특이", "독특", "색다른", "신기한", "힙한"],
   bar: ["술", "술집", "주점", "바", "안주", "하이볼", "포차", "와인바", "이자카야"],
+  solo: ["혼밥", "혼자", "1인", "혼술", "카운터석"],
+  date: ["데이트", "데이트코스", "커플", "로맨틱", "기념일", "프로포즈"],
+  family: ["가족", "가족모임", "부모님", "상견례", "효도", "어르신"],
+  kids: ["아이와", "아이들", "키즈", "유아", "아기의자", "놀이방"],
+  friends: ["친구와", "친구들", "모임", "회식", "단체", "친목"],
 };
 
 export type CategoryNode = {

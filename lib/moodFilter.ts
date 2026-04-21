@@ -1,6 +1,6 @@
 import type { Restaurant } from "@/types/restaurant";
 import { searchNaverBlog } from "./naverApi";
-import { MOOD_TRIGGERS, type MoodKind } from "./categories";
+import { MOOD_LABELS, MOOD_TRIGGERS, type MoodKind } from "./categories";
 
 function stripTags(s: string): string {
   return s.replace(/<[^>]*>/g, "");
@@ -43,11 +43,9 @@ export async function filterRestaurantsByMood(
   district: string | null,
   opts: { concurrency?: number; display?: number } = {},
 ): Promise<MoodFilterResult> {
-  const matchedByKind: Record<MoodKind, Set<string>> = {
-    emotional: new Set(),
-    unique: new Set(),
-    bar: new Set(),
-  };
+  const matchedByKind = Object.fromEntries(
+    (Object.keys(MOOD_LABELS) as MoodKind[]).map((k) => [k, new Set<string>()]),
+  ) as Record<MoodKind, Set<string>>;
   const errors: string[] = [];
   let postsFetched = 0;
 
