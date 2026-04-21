@@ -114,8 +114,8 @@ export function getBucketKakaoGroup(
 
 export function bucketForHour(h: number): TimeBucket {
   if (h >= 5 && h < 10) return "breakfast";
-  if (h >= 10 && h < 14) return "lunch";
-  if (h >= 14 && h < 17) return "afternoon";
+  if (h >= 10 && h < 16) return "lunch";
+  if (h >= 16 && h < 17) return "afternoon";
   if (h >= 17 && h < 21) return "dinner";
   return "latenight"; // 21-24 and 0-5
 }
