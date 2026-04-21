@@ -27,6 +27,41 @@ function parseCoord(raw: string): number {
   return n > 1e6 ? n / 1e7 : n;
 }
 
+export type NaverBlogItem = {
+  title: string;
+  description: string;
+  link?: string;
+  bloggername?: string;
+  postdate?: string;
+};
+
+export async function searchNaverBlog(
+  query: string,
+  opts: { display?: number } = {},
+): Promise<NaverBlogItem[]> {
+  const id = process.env.NAVER_SEARCH_CLIENT_ID;
+  const secret = process.env.NAVER_SEARCH_CLIENT_SECRET;
+  if (!id || !secret) return [];
+
+  const url = new URL("https://openapi.naver.com/v1/search/blog.json");
+  url.searchParams.set("query", query);
+  url.searchParams.set("display", String(Math.min(Math.max(opts.display ?? 20, 1), 100)));
+  url.searchParams.set("sort", "date");
+
+  const res = await fetch(url.toString(), {
+    headers: {
+      "X-Naver-Client-Id": id,
+      "X-Naver-Client-Secret": secret,
+    },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Naver blog search failed: ${res.status}`);
+  }
+  const data = (await res.json()) as { items?: NaverBlogItem[] };
+  return data.items ?? [];
+}
+
 export async function searchNaverLocal(
   keyword: string,
   center: { lat: number; lng: number },

@@ -230,56 +230,84 @@ export default function CategoryWizard({
         </section>
       )}
 
-      {leafNodes.length > 0 && (
-        <section>
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">
-            3단계 · 세부 (다중 선택)
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {leafNodes.map((n) => {
-              const selected = leafIds.includes(n.id);
-              const favorited = favoriteIds.includes(n.id);
-              return (
-                <div
-                  key={n.id}
-                  className={`inline-flex items-center rounded-full border text-sm overflow-hidden ${
-                    selected
-                      ? "bg-orange-600 text-white border-orange-600"
-                      : "bg-white text-gray-700 border-gray-300 hover:border-orange-400"
-                  }`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggle(n.id, leafIds, onLeafChange)}
-                    className="pl-3 py-1"
-                  >
-                    {n.label}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleFavorite(n.id);
-                    }}
-                    className={`pl-1 pr-3 py-1 text-sm ${
-                      favorited
-                        ? selected
-                          ? "text-yellow-300"
-                          : "text-amber-500"
-                        : selected
-                          ? "text-orange-200 hover:text-yellow-300"
-                          : "text-gray-300 hover:text-amber-500"
-                    }`}
-                    title={favorited ? "즐겨찾기 해제" : "즐겨찾기 추가"}
-                  >
-                    {favorited ? "★" : "☆"}
-                  </button>
+      {leafNodes.length > 0 && (() => {
+        const regular = leafNodes.filter((n) => !n.mood);
+        const moody = leafNodes.filter((n) => n.mood);
+        const renderLeaf = (n: CategoryNode, variant: "regular" | "mood") => {
+          const selected = leafIds.includes(n.id);
+          const favorited = favoriteIds.includes(n.id);
+          const selectedCls =
+            variant === "mood"
+              ? "bg-purple-600 text-white border-purple-600"
+              : "bg-orange-600 text-white border-orange-600";
+          const unselectedCls =
+            variant === "mood"
+              ? "bg-white text-purple-700 border-purple-300 hover:border-purple-500"
+              : "bg-white text-gray-700 border-gray-300 hover:border-orange-400";
+          return (
+            <div
+              key={n.id}
+              className={`inline-flex items-center rounded-full border text-sm overflow-hidden ${
+                selected ? selectedCls : unselectedCls
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => toggle(n.id, leafIds, onLeafChange)}
+                className="pl-3 py-1"
+              >
+                {n.label}
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleFavorite(n.id);
+                }}
+                className={`pl-1 pr-3 py-1 text-sm ${
+                  favorited
+                    ? selected
+                      ? "text-yellow-300"
+                      : "text-amber-500"
+                    : selected
+                      ? "text-white/70 hover:text-yellow-300"
+                      : "text-gray-300 hover:text-amber-500"
+                }`}
+                title={favorited ? "즐겨찾기 해제" : "즐겨찾기 추가"}
+              >
+                {favorited ? "★" : "☆"}
+              </button>
+            </div>
+          );
+        };
+        return (
+          <>
+            {regular.length > 0 && (
+              <section>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                  3단계 · 세부 (다중 선택)
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {regular.map((n) => renderLeaf(n, "regular"))}
                 </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+              </section>
+            )}
+            {moody.length > 0 && (
+              <section>
+                <h3 className="text-sm font-semibold text-purple-700 mb-1 flex items-center gap-2">
+                  <span>✨ 리뷰 기반 추천</span>
+                </h3>
+                <p className="text-xs text-gray-500 mb-2">
+                  반경 내 해당 업종을 모두 찾아 최신 블로그 리뷰 20건을 분석해 매칭된 곳만 보여줍니다 (다소 느릴 수 있음).
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {moody.map((n) => renderLeaf(n, "mood"))}
+                </div>
+              </section>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }

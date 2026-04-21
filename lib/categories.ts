@@ -4,11 +4,26 @@ export type SearchHints = {
   googleKeyword?: string;
 };
 
+export type MoodKind = "emotional" | "unique" | "bar";
+
+export const MOOD_LABELS: Record<MoodKind, string> = {
+  emotional: "감성",
+  unique: "이색",
+  bar: "주점",
+};
+
+export const MOOD_TRIGGERS: Record<MoodKind, string[]> = {
+  emotional: ["감성", "분위기", "무드", "인테리어", "예쁜", "뷰", "인생샷", "데이트", "아늑"],
+  unique: ["이색", "특이", "독특", "색다른", "신기한", "힙한"],
+  bar: ["술", "술집", "주점", "바", "안주", "하이볼", "포차", "와인바", "이자카야"],
+};
+
 export type CategoryNode = {
   id: string;
   label: string;
   children?: CategoryNode[];
   searchHints?: SearchHints;
+  mood?: MoodKind;
 };
 
 const leaf = (
@@ -16,6 +31,22 @@ const leaf = (
   label: string,
   searchHints: SearchHints,
 ): CategoryNode => ({ id, label, searchHints });
+
+function moodLeaves(
+  prefix: string,
+  midLabel: string,
+  cuisineKeyword: string,
+): CategoryNode[] {
+  return (Object.keys(MOOD_LABELS) as MoodKind[]).map((kind) => ({
+    id: `${prefix}mood-${kind}`,
+    label: `${midLabel}/${MOOD_LABELS[kind]}`,
+    mood: kind,
+    searchHints: {
+      naverKeywords: [cuisineKeyword],
+      googleKeyword: cuisineKeyword,
+    },
+  }));
+}
 
 export const CATEGORY_TREE: CategoryNode[] = [
   {
@@ -79,6 +110,7 @@ export const CATEGORY_TREE: CategoryNode[] = [
             googleTypes: ["fast_food_restaurant"],
             googleKeyword: "치킨",
           }),
+          ...moodLeaves("kr-", "한식", "한식"),
         ],
       },
       {
@@ -115,6 +147,7 @@ export const CATEGORY_TREE: CategoryNode[] = [
             googleTypes: ["chinese_restaurant"],
             googleKeyword: "대만음식",
           }),
+          ...moodLeaves("cn-", "중식", "중식"),
         ],
       },
       {
@@ -168,6 +201,7 @@ export const CATEGORY_TREE: CategoryNode[] = [
             naverKeywords: ["철판구이", "텟판야키"],
             googleKeyword: "철판구이",
           }),
+          ...moodLeaves("jp-", "일식", "일식"),
         ],
       },
       {
@@ -219,6 +253,7 @@ export const CATEGORY_TREE: CategoryNode[] = [
             googleTypes: ["brunch_restaurant", "breakfast_restaurant"],
             googleKeyword: "브런치",
           }),
+          ...moodLeaves("w-", "양식", "양식"),
         ],
       },
       {
@@ -253,6 +288,7 @@ export const CATEGORY_TREE: CategoryNode[] = [
             naverKeywords: ["필리핀음식"],
             googleKeyword: "필리핀 음식",
           }),
+          ...moodLeaves("sea-", "동남아식", "동남아 음식"),
         ],
       },
       {
@@ -279,6 +315,7 @@ export const CATEGORY_TREE: CategoryNode[] = [
             googleTypes: ["indian_restaurant"],
             googleKeyword: "탄두리 난",
           }),
+          ...moodLeaves("in-", "인도", "인도 음식"),
         ],
       },
       {
@@ -304,6 +341,7 @@ export const CATEGORY_TREE: CategoryNode[] = [
             naverKeywords: ["이란음식", "페르시아"],
             googleKeyword: "이란 음식",
           }),
+          ...moodLeaves("me-", "중동", "중동 음식"),
         ],
       },
       {
@@ -333,6 +371,7 @@ export const CATEGORY_TREE: CategoryNode[] = [
             naverKeywords: ["아르헨티나", "남미 스테이크"],
             googleKeyword: "아르헨티나 스테이크",
           }),
+          ...moodLeaves("la-", "중남미", "중남미 음식"),
         ],
       },
       {
@@ -351,6 +390,7 @@ export const CATEGORY_TREE: CategoryNode[] = [
             naverKeywords: ["남아공", "아프리카음식"],
             googleKeyword: "아프리카 음식",
           }),
+          ...moodLeaves("af-", "아프리카", "아프리카 음식"),
         ],
       },
       {
@@ -366,6 +406,7 @@ export const CATEGORY_TREE: CategoryNode[] = [
             googleTypes: ["buffet_restaurant"],
             googleKeyword: "뷔페",
           }),
+          ...moodLeaves("fu-", "퓨전", "퓨전 레스토랑"),
         ],
       },
       {
@@ -396,6 +437,7 @@ export const CATEGORY_TREE: CategoryNode[] = [
             googleTypes: ["fast_food_restaurant"],
             googleKeyword: "패스트푸드",
           }),
+          ...moodLeaves("ot-", "기타", "맛집"),
         ],
       },
     ],
@@ -475,13 +517,19 @@ export function getLeafHints(id: string): SearchHints | undefined {
   return node?.searchHints;
 }
 
-function collectLeafHints(node: CategoryNode, acc: SearchHints[]): void {
-  if (node.searchHints && isLeaf(node)) {
-    acc.push(node.searchHints);
+export function getMoodKind(id: string): MoodKind | undefined {
+  return BY_ID.get(id)?.mood;
+}
+
+function collectDescendantLeafHints(node: CategoryNode, acc: SearchHints[]): void {
+  if (isLeaf(node)) {
+    // skip mood leaves when expanding a mid/top so selecting a cuisine alone
+    // doesn't get polluted with mood-leaf cuisine keywords
+    if (node.searchHints && !node.mood) acc.push(node.searchHints);
     return;
   }
   if (node.children) {
-    for (const c of node.children) collectLeafHints(c, acc);
+    for (const c of node.children) collectDescendantLeafHints(c, acc);
   }
 }
 
@@ -489,7 +537,11 @@ export function getSubtreeHints(id: string): SearchHints[] {
   const node = BY_ID.get(id);
   if (!node) return [];
   const acc: SearchHints[] = [];
-  collectLeafHints(node, acc);
+  if (isLeaf(node)) {
+    if (node.searchHints) acc.push(node.searchHints);
+    return acc;
+  }
+  collectDescendantLeafHints(node, acc);
   return acc;
 }
 

@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import type { SearchInput, SearchResponse, Restaurant } from "@/types/restaurant";
-import { getSubtreeHints, getNode } from "@/lib/categories";
+import { getSubtreeHints, getNode, getMoodKind, type MoodKind } from "@/lib/categories";
 import { searchNaverLocal } from "@/lib/naverApi";
 import { searchGoogleText, searchGoogleNearby } from "@/lib/googleApi";
 import { searchKakaoLocal } from "@/lib/kakaoApi";
 import { dedup } from "@/lib/dedup";
+import { filterRestaurantsByMood } from "@/lib/moodFilter";
 
 export const runtime = "nodejs";
 
@@ -259,7 +260,54 @@ export async function POST(req: Request) {
     );
   }
 
-  filtered.sort((a, b) => {
+  const moodLeafIds = leaves.filter((id) => getMoodKind(id) !== undefined);
+  const regularLeafIds = leaves.filter((id) => getMoodKind(id) === undefined);
+  const moodKinds: MoodKind[] = Array.from(
+    new Set(moodLeafIds.map((id) => getMoodKind(id)!)),
+  );
+
+  let finalResults: Restaurant[] = filtered;
+
+  if (moodKinds.length > 0) {
+    const hasNaverKey =
+      !!process.env.NAVER_SEARCH_CLIENT_ID && !!process.env.NAVER_SEARCH_CLIENT_SECRET;
+    if (!hasNaverKey) {
+      warnings.push(
+        "리뷰 기반(감성/이색/주점) 필터는 NAVER_SEARCH_CLIENT_ID/SECRET 이 필요합니다.",
+      );
+    } else {
+      const { matchedByKind, errors, postsFetched } = await filterRestaurantsByMood(
+        filtered,
+        moodKinds,
+        input.district ?? null,
+        { concurrency: 8, display: 20 },
+      );
+      errors.slice(0, 3).forEach((e) => warnings.push(`리뷰 분석 오류: ${e}`));
+      if (errors.length > 3) {
+        warnings.push(`리뷰 분석 오류 ${errors.length - 3}건 추가 생략.`);
+      }
+      const moodMatched = new Set<string>();
+      for (const kind of moodKinds) {
+        for (const rid of matchedByKind[kind]) moodMatched.add(rid);
+      }
+      const moodResults = filtered.filter((r) => moodMatched.has(r.id));
+
+      if (regularLeafIds.length > 0) {
+        // union semantics: regular leaves already bring full filtered set
+        finalResults = filtered;
+      } else {
+        finalResults = moodResults;
+      }
+
+      if (finalResults.length === 0) {
+        warnings.push(
+          `리뷰 기반 필터 결과가 0건입니다. (후보 ${filtered.length}개에서 블로그 포스트 ${postsFetched}건 분석)`,
+        );
+      }
+    }
+  }
+
+  finalResults.sort((a, b) => {
     if (input.sort === "rating") {
       return (b.rating ?? -1) - (a.rating ?? -1);
     }
@@ -267,7 +315,7 @@ export async function POST(req: Request) {
   });
 
   const response: SearchResponse = {
-    results: filtered,
+    results: finalResults,
     warnings,
     query: {
       keywords: cappedKeywords,
