@@ -280,7 +280,7 @@ export async function POST(req: Request) {
         filtered,
         moodKinds,
         input.district ?? null,
-        { concurrency: 8, display: 20 },
+        { concurrency: 3, display: 20 },
       );
       errors.slice(0, 3).forEach((e) => warnings.push(`리뷰 분석 오류: ${e}`));
       if (errors.length > 3) {

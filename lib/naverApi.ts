@@ -35,9 +35,11 @@ export type NaverBlogItem = {
   postdate?: string;
 };
 
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 export async function searchNaverBlog(
   query: string,
-  opts: { display?: number } = {},
+  opts: { display?: number; retries?: number } = {},
 ): Promise<NaverBlogItem[]> {
   const id = process.env.NAVER_SEARCH_CLIENT_ID;
   const secret = process.env.NAVER_SEARCH_CLIENT_SECRET;
@@ -48,18 +50,31 @@ export async function searchNaverBlog(
   url.searchParams.set("display", String(Math.min(Math.max(opts.display ?? 20, 1), 100)));
   url.searchParams.set("sort", "date");
 
-  const res = await fetch(url.toString(), {
-    headers: {
-      "X-Naver-Client-Id": id,
-      "X-Naver-Client-Secret": secret,
-    },
-    cache: "no-store",
-  });
-  if (!res.ok) {
+  const maxRetries = opts.retries ?? 2;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetch(url.toString(), {
+      headers: {
+        "X-Naver-Client-Id": id,
+        "X-Naver-Client-Secret": secret,
+      },
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const data = (await res.json()) as { items?: NaverBlogItem[] };
+      return data.items ?? [];
+    }
+    if (res.status === 429 && attempt < maxRetries) {
+      const retryAfter = Number(res.headers.get("retry-after"));
+      const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
+        ? retryAfter * 1000
+        : 400 * Math.pow(2, attempt) + Math.random() * 200;
+      await sleep(waitMs);
+      continue;
+    }
     throw new Error(`Naver blog search failed: ${res.status}`);
   }
-  const data = (await res.json()) as { items?: NaverBlogItem[] };
-  return data.items ?? [];
+  // Should be unreachable; satisfy TS
+  throw new Error("Naver blog search failed: exhausted retries");
 }
 
 export async function searchNaverLocal(

@@ -22,7 +22,7 @@ export default function HomePage() {
   const [midIds, setMidIds] = useState<string[]>([]);
   const [leafIds, setLeafIds] = useState<string[]>([]);
   const [sort, setSort] = useState<"distance" | "rating">("distance");
-  const { favorites, toggle: toggleFavorite, move: moveFavorite } = useFavorites();
+  const { favorites, toggle: toggleFavorite } = useFavorites();
 
   const [results, setResults] = useState<Restaurant[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -196,7 +196,6 @@ export default function HomePage() {
             onLeafChange={setLeafIds}
             favoriteIds={favorites}
             onToggleFavorite={toggleFavorite}
-            onMoveFavorite={moveFavorite}
           />
           <button
             type="button"

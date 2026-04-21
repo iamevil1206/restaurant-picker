@@ -1,9 +1,34 @@
 import type { Restaurant } from "@/types/restaurant";
-import { searchNaverBlog } from "./naverApi";
+import { searchNaverBlog, type NaverBlogItem } from "./naverApi";
 import { MOOD_LABELS, MOOD_TRIGGERS, type MoodKind } from "./categories";
 
 function stripTags(s: string): string {
   return s.replace(/<[^>]*>/g, "");
+}
+
+// In-memory cache so re-searches (e.g., 다시 버튼, 필터 변경 후 재검색) within
+// a warm lambda don't re-hit Naver for the same query and trigger 429s.
+const BLOG_CACHE_TTL_MS = 10 * 60 * 1000;
+type CacheEntry = { items: NaverBlogItem[]; expires: number };
+const blogCache = new Map<string, CacheEntry>();
+
+async function fetchBlogCached(
+  query: string,
+  display: number,
+): Promise<NaverBlogItem[]> {
+  const key = `${display}:${query}`;
+  const hit = blogCache.get(key);
+  const now = Date.now();
+  if (hit && hit.expires > now) return hit.items;
+  const items = await searchNaverBlog(query, { display });
+  blogCache.set(key, { items, expires: now + BLOG_CACHE_TTL_MS });
+  // occasional sweep to keep the map from growing unbounded
+  if (blogCache.size > 500) {
+    for (const [k, v] of blogCache) {
+      if (v.expires <= now) blogCache.delete(k);
+    }
+  }
+  return items;
 }
 
 function matchedTrigger(haystack: string, triggers: string[]): string | null {
@@ -54,7 +79,7 @@ export async function filterRestaurantsByMood(
   }
 
   const districtPart = district?.trim() ? `${district.trim()} ` : "";
-  const concurrency = opts.concurrency ?? 8;
+  const concurrency = opts.concurrency ?? 3;
   const display = opts.display ?? 20;
 
   await runPool(
@@ -62,7 +87,7 @@ export async function filterRestaurantsByMood(
     async (r) => {
       const query = `${districtPart}${r.name}`;
       try {
-        const items = await searchNaverBlog(query, { display });
+        const items = await fetchBlogCached(query, display);
         postsFetched += items.length;
         const haystack = items
           .map((i) => `${stripTags(i.title)} ${stripTags(i.description)}`)
