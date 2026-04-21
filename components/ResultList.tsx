@@ -147,10 +147,14 @@ function extractDistrict(addr?: string): string {
 }
 
 function buildNaverSearchUrl(r: Restaurant): string {
+  // Server-side redirect that probes Naver Local with the bare name first
+  // (district prefix often zeroes out otherwise valid results), falling back
+  // to `{district} {name}` only when the bare name has no hits.
   const district =
     extractDistrict(r.roadAddress) || extractDistrict(r.address);
-  const q = district ? `${district} ${r.name}` : r.name;
-  return `https://map.naver.com/p/search/${encodeURIComponent(q)}`;
+  const params = new URLSearchParams({ name: r.name });
+  if (district) params.set("district", district);
+  return `/api/naver-redirect?${params.toString()}`;
 }
 
 function pickNaverHref(r: Restaurant): string {
